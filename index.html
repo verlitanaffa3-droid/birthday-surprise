@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+    <title>a little surprise for you 💛</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <audio id="bg-music" loop>
+      <source src="assets/music/Christina Perri - A Thousand Years.mp3" type="audio/mpeg" />
+    </audio>
+    <!-- floating background Nailong particles + hearts, injected by JS -->
+    <div id="bg-particles" class="bg-particles" aria-hidden="true"></div>
+
+    <!-- confetti / sparkle canvas layer, drawn by JS -->
+    <canvas id="fx-canvas" class="fx-canvas" aria-hidden="true"></canvas>
+
+    <!-- fullscreen "layar dipenuhi nailong" container -- lives above everything, outside #app -->
+    <div id="fullscreen-nailong" class="fullscreen-nailong" aria-hidden="true"></div>
+
+    <main id="app">
+      <!-- ================= PAGE 1 — HALLO + PASSWORD ================= -->
+      <section id="page-password" class="page active">
+        <div class="glass-card entrance-fade-up">
+          <p class="eyebrow">a little surprise for you...</p>
+          <div class="nailong-stage nailong-float nailong-glow">
+            <img id="nailong-hello" class="nailong-img nailong-lg" src="assets/nailong/nailong-cute.png" alt="Nailong" />
+          </div>
+          <h1 class="headline">halloww 💛</h1>
+          <p class="body-text">sebelum masuk, masukin pw duluu yaaa</p>
+
+          <p class="hint-text">hint: sesuatu yang sering kamu panggil buat aku 🤭</p>
+
+          <form id="password-form" class="password-form" autocomplete="off">
+            <input id="password-input" type="password" placeholder="masukkan pw sayangg" class="pw-input" inputmode="text" />
+            <button type="submit" class="btn btn-primary">masuk ✨</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 1b — PASSWORD SALAH (nailong sedih) ================= -->
+      <section id="page-password-wrong" class="page">
+        <div class="glass-card entrance-fade-up">
+          <div class="nailong-stage">
+            <img class="nailong-img nailong-lg" src="assets/nailong/nailong-sad.png" alt="Nailong sedih" style="display: block; width: 280px; height: auto; opacity: 1" />
+          </div>
+
+          <h2 class="headline">SALAHHH!!!</h2>
+          <p class="body-text">coba inget-inget lagi sayangg...</p>
+
+          <button id="btn-try-again" class="btn btn-primary">coba lagi 💛</button>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 2 — LOADING + LILIN ================= -->
+      <section id="page-loading" class="page">
+        <div class="glass-card">
+          <div class="nailong-stage nailong-float">
+            <img class="nailong-img nailong-md" src="assets/nailong/nailong-happy.png" alt="Nailong" />
+          </div>
+          <p id="loading-text" class="headline-sm">loding.</p>
+          <p id="loading-subtext" class="body-text hidden">lagi nyiapin sesuatuu 💛</p>
+        </div>
+
+        <div id="candle-scene" class="glass-card hidden">
+          <div class="nailong-stage nailong-float">
+            <img class="nailong-img nailong-sm" src="assets/nailong/nailong-happy.png" alt="Nailong" />
+          </div>
+          <p class="body-text">make a wish sayangg <br />jangan lupa tiup lilinnyaaa 🎂</p>
+          <div class="cake-wrap">
+            <div class="candle-flame" id="candle-flame"></div>
+            <div class="cake">
+              <div class="cake-candle"></div>
+              <div class="cake-top"></div>
+              <div class="cake-middle"></div>
+              <div class="cake-base"></div>
+            </div>
+          </div>
+          <p class="body-text">tiup lilinnya dengan tap layar beberapa kali ✨</p>
+          <p id="candle-counter" class="counter">0 / 6</p>
+          <p id="candle-done-text" class="headline-sm hidden">yeayyy lilinnya mati! 🎉</p>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 3 — MINI GAME MENU ================= -->
+      <section id="page-gamemenu" class="page">
+        <div class="glass-card wide">
+          <div class="nailong-stage nailong-float">
+            <img class="nailong-img nailong-md" src="assets/nailong/nailong-happy.png" alt="Nailong" />
+          </div>
+          <h2 class="headline-sm">mini games duluu 🎮</h2>
+          <p class="body-text">selesain semuanya yaa sayangg, baru boleh lanjut hehe 💛</p>
+          <p id="games-progress" class="counter">0 / 3 games completed</p>
+
+          <div class="game-grid">
+            <button class="game-tile" data-game="1">
+              <span class="game-tile-emoji">💛</span>
+              <span class="game-tile-title">match the nailong</span>
+              <span class="game-tile-status" id="status-game-1">belum selesai</span>
+            </button>
+            <button class="game-tile" data-game="2">
+              <span class="game-tile-emoji">🌼</span>
+              <span class="game-tile-title">catch the nailong</span>
+              <span class="game-tile-status" id="status-game-2">belum selesai</span>
+            </button>
+            <button class="game-tile" data-game="3">
+              <span class="game-tile-emoji">🎈</span>
+              <span class="game-tile-title">pop the balloon</span>
+              <span class="game-tile-status" id="status-game-3">belum selesai</span>
+            </button>
+          </div>
+
+          <button id="btn-continue-after-games" class="btn btn-primary hidden">lanjuttt 💛</button>
+        </div>
+      </section>
+
+      <!-- ============ GAME 1 OVERLAY — MATCH THE NAILONG ============ -->
+      <section id="overlay-game1" class="overlay">
+        <div class="overlay-card">
+          <p class="game-hud">pairs: <span id="g1-pairs">0 / 6</span> &nbsp;•&nbsp; time: <span id="g1-timer">45</span>s</p>
+          <div id="g1-board" class="memory-board"></div>
+          <p id="g1-message" class="headline-sm hidden"></p>
+          <button id="g1-close" class="btn btn-ghost">tutup</button>
+        </div>
+      </section>
+
+      <!-- ============ GAME 2 OVERLAY — CATCH THE NAILONG ============ -->
+      <section id="overlay-game2" class="overlay">
+        <div class="overlay-card">
+          <p class="game-hud">terkumpul: <span id="g2-count">0 / 12</span> &nbsp;•&nbsp; time: <span id="g2-timer">25</span>s</p>
+          <div id="g2-arena" class="catch-arena">
+            <div id="g2-basket" class="basket"></div>
+          </div>
+          <p id="g2-message" class="headline-sm hidden"></p>
+          <button id="g2-close" class="btn btn-ghost">tutup</button>
+        </div>
+      </section>
+
+      <!-- ============ GAME 3 OVERLAY — POP THE BALLOON ============ -->
+      <section id="overlay-game3" class="overlay">
+        <div class="overlay-card">
+          <p class="game-hud">pecah: <span id="g3-count">0 / 10</span> &nbsp;•&nbsp; time: <span id="g3-timer">25</span>s</p>
+          <div id="g3-arena" class="balloon-arena"></div>
+          <p id="g3-message" class="headline-sm hidden"></p>
+          <button id="g3-close" class="btn btn-ghost">tutup</button>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 4 — HALLOO SAYANG ================= -->
+      <section id="page-hallosayang" class="page">
+        <div class="glass-card">
+          <div class="nailong-stage nailong-bounce-soft nailong-glow">
+            <img class="nailong-img nailong-lg" src="assets/nailong/nailong-hug.png" alt="Nailong" />
+          </div>
+          <h2 class="headline">halloo sayangg 💛</h2>
+          <p class="body-text">akhirnya selesai jugaa mini gamesnyaa hehe.</p>
+          <button class="btn btn-primary" data-next="page-pertanyaan">klikk ini sayangg 💛</button>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 5 — PERTANYAAN ================= -->
+      <section id="page-pertanyaan" class="page">
+        <div class="glass-card">
+          <div class="nailong-stage nailong-rise">
+            <img class="nailong-img nailong-md" src="assets/nailong/nailong-cute.png" alt="Nailong" />
+          </div>
+          <p id="typewriter-text" class="headline-sm typewriter"></p>
+          <button class="btn btn-primary hidden" id="btn-after-typewriter" data-next="page-specialday">klik ini sayangg ✨</button>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 6 — SPECIAL DAY ================= -->
+      <section id="page-specialday" class="page">
+        <div class="glass-card">
+          <div class="nailong-stage nailong-float nailong-glow">
+            <img class="nailong-img nailong-lg" src="assets/nailong/nailong-birthday.png" alt="Nailong" />
+          </div>
+          <h2 class="headline">YAPPP,<br />hari ini hari <span class="glow-word">spesiall</span> kamuu sayangggg 💛</h2>
+          <button class="btn btn-primary" data-next="page-areyouready">selanjutnyaaa 💛</button>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 7 — ARE YOU READY ================= -->
+      <section id="page-areyouready" class="page dim">
+        <div class="glass-card">
+          <div class="nailong-stage nailong-float">
+            <img id="nailong-ready" class="nailong-img nailong-md" src="assets/nailong/nailong-cute.png" alt="Nailong" />
+          </div>
+          <h2 class="headline-sm">are you readyy<br />to open this??? 💌</h2>
+          <div class="yesno-row">
+            <button id="btn-yes" class="btn btn-primary">YES 💛</button>
+            <button id="btn-no" class="btn btn-secondary">NO 😭</button>
+          </div>
+          <p id="angry-text" class="error-text hidden">KOKK GITUU SAYANGGGG?!?!! 😤💛</p>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 8 — HAPPY BIRTHDAY ================= -->
+      <section id="page-happybirthday" class="page">
+        <div class="glass-card">
+          <div class="nailong-stage nailong-float nailong-glow">
+            <img class="nailong-img nailong-lg" src="assets/nailong/nailong-birthday.png" alt="Nailong" />
+          </div>
+          <h1 id="hbd-headline" class="headline typewriter">happyy birthday<br />sayanggkuuu 🎂💛</h1>
+          <button id="btn-something" class="btn btn-primary hidden">i have something for you 💌</button>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 10 — LONG BIRTHDAY MESSAGE ================= -->
+      <section id="page-letter" class="page">
+        <div class="glass-card letter-card entrance-open">
+          <div class="nailong-stage nailong-float">
+            <img class="nailong-img nailong-sm" src="assets/nailong/nailong-cute.png" alt="Nailong" />
+          </div>
+          <h2 class="headline-sm">happy birthdayyy 💛</h2>
+          <div class="letter-scroll">
+            <p id="letter-typewriter" class="letter-typed"></p>
+          </div>
+          <button id="btn-after-letter" class="btn btn-primary hidden" data-next="page-finalhug">klik selanjutnya 🥺</button>
+        </div>
+      </section>
+
+      <!-- ================= PAGE 11 — FINAL HUG ================= -->
+      <section id="page-finalhug" class="page">
+        <div class="glass-card wide">
+          <div class="hug-stage">
+            <img id="hug-left" class="nailong-img nailong-md hug-left" src="assets/nailong/nailong-happy.png" alt="Nailong" />
+            <img id="hug-right" class="nailong-img nailong-md hug-right" src="assets/nailong/nailong-hug.png" alt="Nailong" />
+            <div id="hug-heart" class="hug-heart hidden"></div>
+          </div>
+          <h2 class="headline">a big hug for youu!!! 💛</h2>
+          <p class="body-text">semoga hari ulang tahunmu<br />LOVEEUUUU SAYANGKUUU</p>
+          <p class="deco-emojis">✨ 💛 🌼 🎂 💛 ✨</p>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
