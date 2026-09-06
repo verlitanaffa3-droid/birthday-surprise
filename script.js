@@ -26,10 +26,10 @@ const CONFIG = {
 const NAILONG = {
   cute: "assets/nailong/nailong-cute.png",
   happy: "assets/nailong/nailong-happy.png",
-  birthday: "assets/nailong/nailong-birthday.png",
+  birthday: "assets/nailong/nailong-birthday(2).png",
   angry: "assets/nailong/nailong-angry.png",
   sad: "assets/nailong/nailong-sad.png",
-  hug: "assets/nailong/nailong-hug.png",
+  hug: "assets/nailong/nailong-hug(2).png",
 };
 const NAILONG_LIST = Object.values(NAILONG);
 // 6 gambar berbeda dipakai untuk 6 pasangan di memory game
@@ -830,22 +830,8 @@ function fillScreenWithNailong() {
 /* ========================================================================
    PAGE 10 — SURAT ULANG TAHUN (typewriter huruf-per-huruf dengan cursor)
    ======================================================================== */
-const LETTER_TEXT = `hari ini spesial banget karena kamu bertambah umur.
-
-semoga umur baru ini bawa banyak kebahagiaan buat kamu.
-
-semoga semua impian kamu pelan-pelan tercapai satu-satu.
-
-semoga kamu selalu dikelilingi orang-orang yang sayang sama kamu.
-
-semoga hari-harimu ke depannya jadi lebih indah dari sebelumnya.
-
-semoga kamu selalu punya alasan buat tersenyum, sekecil apapun itu.
-
-makasih ya udah jadi seseorang yang spesial banget selama ini.
-
-semoga semua hal baik dateng ke kamu, satu-satu, pelan tapi pasti.
-
+const LETTER_TEXT = `HAIIII, happy birthday yaa sayangkuu!!!
+Hari ini adalah salah satu hari paling spesial karena kamu bertambah satu tahun usianya. Aku cuma mau bilang, terima kasih banyak sudah lahir ke dunia ini dan terima kasih sudah hadir serta membawa begitu banyak kebahagiaan di hidup aku. Bareng kamu, hari-hari biasa jadi terasa jauh lebih istimewa.Aku tahuu kamuu kadang capee. Tapi ingat ya, kamu tidak harus memikul semuanya sendirian. Ada aku di sini yang bakal selalu support kamu, nemenin kamu dalam kondisi apa pun, baik senang maupun susah.Di umur yang baru ini, semoga kamu selalu diberikan kesehatan yang baikk, rezeki yang lancar dan berkah, serta dimudahkan dalam setiap langkah dan impian yang lagi kamu kejar. Semoga kamu juga makin sabar, makin bahagia hatinya, dan tetap jadi pribadi tulus yang aku kenal. Jangan pernah capek jadi orang baik, yaa.
 once again...
 happy birthday, youu 💛🎂`;
 
