@@ -26,10 +26,10 @@ const CONFIG = {
 const NAILONG = {
   cute: "assets/nailong/nailong-cute.png",
   happy: "assets/nailong/nailong-happy.png",
-  birthday: "assets/nailong/nailong-birthday(2).png",
+  birthday: "assets/nailong/nailong-birthday (2).png",
   angry: "assets/nailong/nailong-angry.png",
   sad: "assets/nailong/nailong-sad.png",
-  hug: "assets/nailong/nailong-hug(2).png",
+  hug: "assets/nailong/nailong-hug (2).png",
 };
 const NAILONG_LIST = Object.values(NAILONG);
 // 6 gambar berbeda dipakai untuk 6 pasangan di memory game
