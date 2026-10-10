@@ -111,6 +111,14 @@ function resizeFxCanvas() {
 window.addEventListener("resize", resizeFxCanvas);
 resizeFxCanvas();
 
+let fxRunning = false;
+function ensureFxLoop() {
+  if (!fxRunning) {
+    fxRunning = true;
+    requestAnimationFrame(fxLoop);
+  }
+}
+
 function spawnSparkle(x, y, count = 10) {
   for (let i = 0; i < count; i++) {
     fxParticles.push({
@@ -124,6 +132,7 @@ function spawnSparkle(x, y, count = 10) {
       type: "sparkle",
     });
   }
+  ensureFxLoop();
 }
 function spawnConfetti(count = 60) {
   for (let i = 0; i < count; i++) {
@@ -140,6 +149,7 @@ function spawnConfetti(count = 60) {
       type: "confetti",
     });
   }
+  ensureFxLoop();
 }
 function fxLoop() {
   fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
@@ -168,9 +178,13 @@ function fxLoop() {
   });
   fxCtx.globalAlpha = 1;
   fxParticles = fxParticles.filter((p) => p.life > 0 && p.y < fxCanvas.height + 40);
-  requestAnimationFrame(fxLoop);
+  if (fxParticles.length) {
+    requestAnimationFrame(fxLoop);
+  } else {
+    fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+    fxRunning = false; // berhenti total kalau tidak ada partikel
+  }
 }
-fxLoop();
 
 /* ========================================================================
    PAGE 1 — PASSWORD (dengan hint, dan halaman khusus kalau salah)
@@ -243,8 +257,14 @@ function startCandleGame() {
   const doneText = $("#candle-done-text");
   const cakeWrap = $(".cake-wrap");
 
-  function handleTap() {
+  let lastTapAt = 0;
+  function handleTap(e) {
     if (taps >= CONFIG.CANDLE_TAPS_NEEDED) return;
+    // pengaman: abaikan pointer kedua & event yang datang terlalu rapat (< 150 ms)
+    if (e && e.isPrimary === false) return;
+    const now = performance.now();
+    if (now - lastTapAt < 150) return;
+    lastTapAt = now;
     taps++;
     counterEl.textContent = `${taps} / ${CONFIG.CANDLE_TAPS_NEEDED}`;
 
@@ -265,13 +285,12 @@ function startCandleGame() {
       spawnConfetti(50);
       doneText.classList.remove("hidden");
       doneText.textContent = "yeayyy lilinnya mati! 🎉";
-      document.removeEventListener("click", handleTap);
-      document.removeEventListener("touchstart", handleTap);
+      document.removeEventListener("pointerdown", handleTap);
       setTimeout(() => goToPage("page-gamemenu"), 1600);
     }
   }
-  document.addEventListener("click", handleTap);
-  document.addEventListener("touchstart", handleTap, { passive: true });
+  // SATU jenis event saja (pointerdown) supaya 1 tap = 1 hitungan di HP maupun laptop
+  document.addEventListener("pointerdown", handleTap);
 }
 
 /* ========================================================================
@@ -309,9 +328,11 @@ $("#btn-continue-after-games").addEventListener("click", () => goToPage("page-ha
 
 function openOverlay(id) {
   document.getElementById(id).classList.add("active");
+  document.body.classList.add("game-active"); // matikan blur & partikel background (lihat style.css)
 }
 function closeOverlay(id) {
   document.getElementById(id).classList.remove("active");
+  if (!document.querySelector(".overlay.active")) document.body.classList.remove("game-active");
 }
 
 $("#g1-close").addEventListener("click", () => {
@@ -435,89 +456,192 @@ function stopMemoryGame() {
 }
 
 /* ------------------------- GAME 2: CATCH THE NAILONG -------------------- */
+/* Versi CANVAS (ringan untuk HP):
+   - semua nailong yang jatuh digambar di 1 canvas (bukan puluhan <img> yang bergerak)
+   - gambar nailong dikecilkan SEKALI jadi sprite kecil (file aslinya ~500px, jauh lebih besar dari yang tampil)
+   - gerakan berdasarkan waktu (dt), jadi kecepatannya sama di layar 60Hz / 120Hz
+   - keranjang bisa digeser dari mana saja di layar game (jari / mouse)
+   Pengaturan gampang diedit di CATCH_CFG di bawah. */
+const CATCH_CFG = {
+  SPAWN_MS: 550, // jeda munculnya nailong baru
+  SIZE_MIN: 36, // ukuran nailong (px)
+  SIZE_MAX: 62,
+  SPEED_MIN: 90, // kecepatan jatuh (px per detik)
+  SPEED_MAX: 200,
+  BASKET_W: 90, // lebar & tinggi keranjang (samakan dengan .basket di style.css)
+  BASKET_H: 56,
+  BASKET_BOTTOM: 10,
+};
 let catchState = null;
+let catchSprites = null; // cache sprite, dibuat sekali
+
+/* kecilkan tiap gambar nailong jadi sprite 64px (proporsi asli dipertahankan) */
+function buildCatchSprites() {
+  if (catchSprites) return;
+  catchSprites = [];
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const S = Math.round(CATCH_CFG.SIZE_MAX * dpr);
+  NAILONG_LIST.forEach((src) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const g = c.getContext("2d");
+      g.imageSmoothingQuality = "high";
+      const k = Math.min(S / img.naturalWidth, S / img.naturalHeight);
+      const w = img.naturalWidth * k;
+      const h = img.naturalHeight * k;
+      g.drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
+      catchSprites.push(c);
+    };
+    img.src = src;
+  });
+}
 
 function startCatchGame() {
   stopCatchGame();
+  buildCatchSprites();
+  const page = $("#overlay-game2");
   const arena = $("#g2-arena");
-  arena.querySelectorAll(".falling-nailong").forEach((n) => n.remove());
+  const basket = $("#g2-basket");
+  arena.querySelectorAll("canvas").forEach((n) => n.remove());
   $("#g2-message").classList.add("hidden");
   $("#g2-count").textContent = `0 / ${CONFIG.CATCH_TARGET}`;
 
-  const basket = $("#g2-basket");
-  basket.style.left = "50%";
+  const cv = document.createElement("canvas");
+  cv.className = "catch-canvas";
+  arena.insertBefore(cv, basket);
+  const ctx = cv.getContext("2d");
+  const DPR = Math.min(window.devicePixelRatio || 1, 2); // maks 2x supaya HP tidak berat
+  let W = 0;
+  let H = 0;
+  function resize() {
+    W = arena.clientWidth;
+    H = arena.clientHeight;
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    basketX = Math.max(0, Math.min(W - CATCH_CFG.BASKET_W, basketX));
+    placeBasket();
+  }
+  let basketX = 0;
+  const basketY = () => H - CATCH_CFG.BASKET_H - CATCH_CFG.BASKET_BOTTOM;
+  function placeBasket() {
+    basket.style.transform = `translate3d(${basketX}px, ${basketY()}px, 0)`;
+  }
+  W = arena.clientWidth;
+  H = arena.clientHeight;
+  basketX = (W - CATCH_CFG.BASKET_W) / 2;
+  resize();
 
-  catchState = { caught: 0, timeLeft: CONFIG.CATCH_TIMER_SECONDS, timerId: null, spawnId: null, rafId: null, falling: [], running: true };
-
-  function moveBasket(clientX) {
-    const rect = arena.getBoundingClientRect();
-    let x = clientX - rect.left;
-    x = Math.max(45, Math.min(rect.width - 45, x));
-    basket.style.left = x + "px";
-  }
-  function onMouseMove(e) {
-    moveBasket(e.clientX);
-  }
-  function onTouchMove(e) {
-    if (e.touches[0]) moveBasket(e.touches[0].clientX);
-  }
-  arena.addEventListener("mousemove", onMouseMove);
-  arena.addEventListener("touchmove", onTouchMove, { passive: true });
-  catchState.cleanupMove = () => {
-    arena.removeEventListener("mousemove", onMouseMove);
-    arena.removeEventListener("touchmove", onTouchMove);
+  catchState = {
+    caught: 0,
+    timeLeft: CONFIG.CATCH_TIMER_SECONDS,
+    timerId: null,
+    rafId: null,
+    running: true,
   };
 
-  function spawnFalling() {
-    const el = document.createElement("img");
-    el.src = pick(NAILONG_LIST);
-    el.className = "falling-nailong";
-    const size = rand(36, 62);
-    el.style.width = el.style.height = size + "px";
-    const arenaWidth = arena.clientWidth;
-    el.style.left = rand(10, arenaWidth - size - 10) + "px";
-    el.style.transform = `rotate(${rand(-30, 30)}deg)`;
-    arena.appendChild(el);
-    catchState.falling.push({ el, y: -60, speed: rand(1.4, 3.2), rot: rand(-2, 2) });
+  /* geser keranjang: hanya simpan posisi, digambar di loop */
+  function onMove(e) {
+    const r = arena.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * W - CATCH_CFG.BASKET_W / 2;
+    basketX = Math.max(0, Math.min(W - CATCH_CFG.BASKET_W, x));
+    placeBasket();
   }
-  catchState.spawnId = setInterval(() => {
-    if (catchState.running) spawnFalling();
-  }, 550);
+  page.addEventListener("pointermove", onMove);
+  page.addEventListener("pointerdown", onMove);
+  window.addEventListener("resize", resize);
+  catchState.cleanupMove = () => {
+    page.removeEventListener("pointermove", onMove);
+    page.removeEventListener("pointerdown", onMove);
+    window.removeEventListener("resize", resize);
+  };
 
-  function loop() {
-    if (!catchState.running) return;
-    const basketRect = basket.getBoundingClientRect();
+  const items = [];
+  const pops = []; // efek kecil saat nailong tertangkap (mengecil + memudar)
+  let last = performance.now();
+  let spawnAcc = 0;
 
-    catchState.falling.forEach((item) => {
-      item.y += item.speed;
-      item.el.style.top = item.y + "px";
-      const currentRot = (parseFloat(item.el.dataset.rot) || 0) + item.rot;
-      item.el.dataset.rot = currentRot;
-      item.el.style.transform = `rotate(${currentRot}deg)`;
+  function spawn() {
+    if (!catchSprites.length) return; // gambar belum selesai dimuat
+    items.push({
+      s: catchSprites[(Math.random() * catchSprites.length) | 0],
+      size: rand(CATCH_CFG.SIZE_MIN, CATCH_CFG.SIZE_MAX),
+      x: rand(10, Math.max(11, W - CATCH_CFG.SIZE_MAX - 10)),
+      y: -CATCH_CFG.SIZE_MAX,
+      v: rand(CATCH_CFG.SPEED_MIN, CATCH_CFG.SPEED_MAX),
+      rot: rand(-30, 30),
+      vr: rand(-120, 120), // derajat per detik
+    });
+  }
 
-      const itemRect = item.el.getBoundingClientRect();
-      const overlapX = itemRect.left < basketRect.right && itemRect.right > basketRect.left;
-      const overlapY = itemRect.bottom > basketRect.top && itemRect.top < basketRect.bottom;
+  function frame(now) {
+    if (!catchState || !catchState.running) return;
+    const dt = Math.min(now - last, 50) / 1000;
+    last = now;
 
-      if (!item.caught && overlapX && overlapY && item.y > arena.clientHeight - 90) {
-        item.caught = true;
+    spawnAcc += dt * 1000;
+    while (spawnAcc >= CATCH_CFG.SPAWN_MS) {
+      spawnAcc -= CATCH_CFG.SPAWN_MS;
+      spawn();
+    }
+
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    const by = basketY();
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      it.y += it.v * dt;
+      it.rot += it.vr * dt;
+
+      /* tabrakan: murni hitungan angka (tanpa membaca layout) */
+      const hit = it.y + it.size > by + 6 && it.y < by + CATCH_CFG.BASKET_H && it.x + it.size > basketX + 6 && it.x < basketX + CATCH_CFG.BASKET_W - 6;
+      if (hit) {
+        items.splice(i, 1);
+        pops.push({ s: it.s, size: it.size, x: it.x, y: it.y, rot: it.rot, t: 0 });
         catchState.caught++;
         $("#g2-count").textContent = `${catchState.caught} / ${CONFIG.CATCH_TARGET}`;
-        spawnSparkle(itemRect.left + itemRect.width / 2, itemRect.top, 10);
-        item.el.style.transition = "transform 0.25s ease, opacity 0.25s ease";
-        item.el.style.transform += " scale(0.2)";
-        item.el.style.opacity = "0";
-        setTimeout(() => item.el.remove(), 260);
-
-        if (catchState.caught >= CONFIG.CATCH_TARGET) finishCatchGame(true);
-      } else if (item.y > arena.clientHeight + 20 && !item.caught) {
-        item.el.remove();
+        const r = arena.getBoundingClientRect();
+        spawnSparkle(r.left + ((it.x + it.size / 2) / W) * r.width, r.top + ((it.y + it.size / 2) / H) * r.height, 10);
+        if (catchState.caught >= CONFIG.CATCH_TARGET) {
+          finishCatchGame(true);
+          return;
+        }
+        continue;
       }
-    });
-    catchState.falling = catchState.falling.filter((item) => !item.caught && item.y <= arena.clientHeight + 20);
-    catchState.rafId = requestAnimationFrame(loop);
+      if (it.y > H + CATCH_CFG.SIZE_MAX) {
+        items.splice(i, 1);
+        continue;
+      }
+      drawSprite(it.s, it.x, it.y, it.size, it.rot, 1);
+    }
+    for (let i = pops.length - 1; i >= 0; i--) {
+      const p = pops[i];
+      p.t += dt / 0.25;
+      if (p.t >= 1) {
+        pops.splice(i, 1);
+        continue;
+      }
+      const ps = p.size * (1 - p.t * 0.8); // mengecil sambil memudar
+      drawSprite(p.s, p.x + p.size / 2 - ps / 2, p.y + p.size / 2 - ps / 2, ps, p.rot, 1 - p.t);
+    }
+    catchState.rafId = requestAnimationFrame(frame);
   }
-  loop();
+
+  function drawSprite(sprite, x, y, size, rotDeg, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x + size / 2, y + size / 2);
+    ctx.rotate((rotDeg * Math.PI) / 180);
+    ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+    ctx.restore();
+  }
+
+  catchState.rafId = requestAnimationFrame((t) => {
+    last = t;
+    frame(t);
+  });
 
   $("#g2-timer").textContent = catchState.timeLeft;
   catchState.timerId = setInterval(() => {
@@ -531,7 +655,6 @@ function finishCatchGame(success) {
   if (!catchState || !catchState.running) return;
   catchState.running = false;
   clearInterval(catchState.timerId);
-  clearInterval(catchState.spawnId);
   cancelAnimationFrame(catchState.rafId);
 
   const msgEl = $("#g2-message");
@@ -541,7 +664,10 @@ function finishCatchGame(success) {
     spawnConfetti(40);
     gameCompleted[2] = true;
     updateGameMenuProgress();
-    setTimeout(() => closeOverlay("overlay-game2"), 1600);
+    setTimeout(() => {
+      closeOverlay("overlay-game2");
+      stopCatchGame(); // bersihkan canvas & listener
+    }, 1600);
   } else {
     msgEl.textContent = "waktunya habiss, tapi gapapaa 💛";
     setTimeout(() => startCatchGame(), 1800);
@@ -551,11 +677,10 @@ function stopCatchGame() {
   if (!catchState) return;
   catchState.running = false;
   clearInterval(catchState.timerId);
-  clearInterval(catchState.spawnId);
   cancelAnimationFrame(catchState.rafId);
   if (catchState.cleanupMove) catchState.cleanupMove();
   $("#g2-arena")
-    .querySelectorAll(".falling-nailong")
+    .querySelectorAll("canvas")
     .forEach((n) => n.remove());
   catchState = null;
 }
